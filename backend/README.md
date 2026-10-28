@@ -78,6 +78,28 @@ npm run start:dev
 }
 ```
 
+## Сповіщення про критичну температуру (SSE)
+
+`GET /alerts/stream` — потік Server-Sent Events (`text/event-stream`).
+Коли температурний давач (`POST /sensors` або `PATCH /sensors/:id` зі зміною
+`value`) повідомляє значення **нижче -10** (`CRITICAL_TEMPERATURE_C` у
+[src/alerts/alerts.service.ts](src/alerts/alerts.service.ts)), усім підключеним
+клієнтам надсилається подія `critical-temperature`:
+
+```
+event: critical-temperature
+data: {"sensorId":"...","sensorName":"Temp","value":-12,"unit":"C","threshold":-10,"timestamp":"...","message":"..."}
+```
+
+Кожні 25 с надсилається службова подія `ping`, щоб проксі (Render) не
+закривав неактивне з'єднання. Фронтенд (`frontend/components/CriticalAlerts.tsx`)
+підписується через `EventSource` і показує сповіщення користувачам на всіх
+сторінках; адреса бекенду береться зі змінної `NEXT_PUBLIC_API_URL`
+(за замовчуванням `http://localhost:3000`).
+
+Перевірка: `curl -N http://localhost:3000/alerts/stream`, а в іншому терміналі
+`POST /sensors` із `"value": -15`.
+
 ## Валідація
 
 Обидві сутності використовують DTO (`class-validator` + `class-transformer`)
@@ -119,6 +141,7 @@ src/
     temperature-sensors.controller.ts
     temperature-sensors.service.ts
     temperature-sensors.module.ts
+  alerts/                   # SSE-сповіщення про критичну температуру
   humidity-sensors/
     dto/
     entities/

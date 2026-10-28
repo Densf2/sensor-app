@@ -4,19 +4,23 @@ import { Repository } from 'typeorm';
 import { TemperatureSensor } from './entities/temperature-sensor.entity.js';
 import { CreateTemperatureSensorDto } from './dto/create-temperature-sensor.dto.js';
 import { UpdateTemperatureSensorDto } from './dto/update-temperature-sensor.dto.js';
+import { AlertsService } from '../alerts/alerts.service.js';
 
 @Injectable()
 export class TemperatureSensorsService {
   constructor(
     @InjectRepository(TemperatureSensor)
     private readonly sensorRepository: Repository<TemperatureSensor>,
+    private readonly alertsService: AlertsService,
   ) {}
 
   async create(
     createSensorDto: CreateTemperatureSensorDto,
   ): Promise<TemperatureSensor> {
     const sensor = this.sensorRepository.create(createSensorDto);
-    return await this.sensorRepository.save(sensor);
+    const saved = await this.sensorRepository.save(sensor);
+    this.alertsService.checkTemperature(saved);
+    return saved;
   }
 
   async findAll(): Promise<TemperatureSensor[]> {
@@ -28,8 +32,7 @@ export class TemperatureSensorsService {
 
   async findOne(id: string): Promise<TemperatureSensor> {
     const sensor = await this.sensorRepository.findOneBy({ id });
-    if (!sensor)
-      throw new NotFoundException(`sensor with id ${id} not found`);
+    if (!sensor) throw new NotFoundException(`sensor with id ${id} not found`);
     return sensor;
   }
 
@@ -39,7 +42,10 @@ export class TemperatureSensorsService {
   ): Promise<TemperatureSensor> {
     const sensor = await this.findOne(id);
     Object.assign(sensor, updateSensorDto);
-    return await this.sensorRepository.save(sensor);
+    const saved = await this.sensorRepository.save(sensor);
+    if (updateSensorDto.value !== undefined)
+      this.alertsService.checkTemperature(saved);
+    return saved;
   }
 
   async remove(id: string): Promise<void> {
