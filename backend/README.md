@@ -1,16 +1,45 @@
 # comsys-backend
 
 Бекенд на NestJS для кіберфізичної системи моніторингу давачів (температура,
-вологість). Реалізація CRUD REST API
+вологість). Реалізація CRUD REST API з зберіганням даних у PostgreSQL
+(TypeORM, хмарна БД на платформі Render).
 
 ## Встановлення та запуск
 
 ```bash
 npm install
+cp .env.example .env   # та заповнити параметри підключення до БД
 npm run start:dev
 ```
 
 Сервер піднімається на `http://localhost:3000`.
+
+## Налаштування бази даних (PostgreSQL)
+
+Параметри підключення беруться зі змінних середовища (локально — з файлу
+`.env`, який ігнорується git; на Render — з розділу Environment вебсервісу).
+Значення знаходяться в Configuration Options сервісу Postgres на Render
+(для локального запуску використовується **External** Database URL/хост,
+для вебсервісу на Render — Internal).
+
+| Змінна         | Опис                                                              |
+| -------------- | ----------------------------------------------------------------- |
+| `DB_HOST`      | Хост БД                                                           |
+| `DB_PORT`      | Порт (за замовчуванням `5432`)                                    |
+| `DB_USERNAME`  | Ім'я користувача                                                  |
+| `DB_PASSWORD`  | Пароль                                                            |
+| `DB_NAME`      | Назва БД                                                          |
+| `DB_SSL`       | `true` (за замовчуванням) для Render; `false` для локального PG   |
+| `FRONTEND_URL` | Дозволений CORS-origin (необов'язково, за замовчуванням `*`)      |
+
+Схема БД **не** синхронізується автоматично (`synchronize: false`). Таблиці
+`temperature-sensors` і `humidity-sensors` створює TypeORM-міграція
+[src/migrations](src/migrations), яка виконується автоматично при старті
+застосунку (`migrationsRun: true`). Зміни схеми потрібно додавати новими
+міграціями.
+
+Тест `npm run test:e2e` піднімає весь застосунок, тому потребує доступної БД
+(ті самі змінні середовища).
 
 ## Реалізовані сутності
 
@@ -52,9 +81,11 @@ npm run start:dev
 ## Валідація
 
 Обидві сутності використовують DTO (`class-validator` + `class-transformer`)
-з увімкненим глобальним `ValidationPipe` (`whitelist: true, transform: true`)
+з увімкненим глобальним `ValidationPipe`
+(`whitelist: true, forbidNonWhitelisted: true, transform: true`)
 у [src/main.ts](src/main.ts). Поля `sensorName`, `value`, `unit` є
-обов'язковими; `timestamp` — опційне і проставляється сервером автоматично.
+обов'язковими; `timestamp` — опційне (дата) і проставляється БД автоматично.
+Параметр `:id` має бути валідним UUID (інакше — 400).
 
 ## Тестування через Postman
 
@@ -81,6 +112,7 @@ npm run start:dev
 src/
   app.module.ts
   main.ts
+  migrations/               # TypeORM-міграції схеми БД
   temperature-sensors/
     dto/
     entities/
@@ -95,4 +127,6 @@ src/
     humidity-sensors.module.ts
 ```
 
-Дані зберігаються in-memory (у масиві всередині сервісу) — персистентне сховище планується.
+Дані зберігаються у PostgreSQL. `GET /sensors` та `GET /humidity-sensors`
+повертають до 50 останніх записів, відсортованих за `createdAt` (новіші
+першими).
