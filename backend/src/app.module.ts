@@ -7,6 +7,7 @@ import { TemperatureSensorsModule } from './temperature-sensors/temperature-sens
 import { TemperatureSensor } from './temperature-sensors/entities/temperature-sensor.entity.js';
 import { HumiditySensorsModule } from './humidity-sensors/humidity-sensors.module.js';
 import { HumiditySensor } from './humidity-sensors/entities/humidity-sensor.entity.js';
+import { AlertsModule } from './alerts/alerts.module.js';
 import { CreateSensorTables1761600000000 } from './migrations/1761600000000-CreateSensorTables.js';
 
 @Module({
@@ -33,6 +34,7 @@ import { CreateSensorTables1761600000000 } from './migrations/1761600000000-Crea
     }),
     TemperatureSensorsModule,
     HumiditySensorsModule,
+    AlertsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
